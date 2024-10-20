@@ -37,23 +37,28 @@ async def on_ready():
     print(f'{bot.user} has connected to Discord!')
     check_class_info.start()
 
-@bot.command(name='classinfo', help='最新の授業情報を取得します')
-async def get_class_info(ctx):
-    info = fetch_class_info()
-    if info:
-        await ctx.send("最新の授業情報:\n" + "\n".join(info))
-    else:
-        await ctx.send("授業情報を取得できませんでした。")
-
 @tasks.loop(hours=6)
 async def check_class_info():
     channel = bot.get_channel(int(os.getenv('DISCORD_CHANNEL_ID')))
     if channel:
         info = fetch_class_info()
         if info:
-            await channel.send("最新の授業情報:\n" + "\n".join(info))
+            last_info = get_last_info()
+            if info != last_info:
+                await channel.send("最新の授業情報:\n" + "\n".join(info))
+                save_last_info(info)
         else:
-            await channel.send("授業情報を取得できませんでした。")
+            print("授業情報を取得できませんでした。")
+
+def get_last_info():
+    if os.path.exists('last_info.txt'):
+        with open('last_info.txt', 'r', encoding='utf-8') as f:
+            return f.read().splitlines()
+    return []
+
+def save_last_info(info):
+    with open('last_info.txt', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(info))
 
 def fetch_class_info():
     site_url = 'https://www.ibaraki-ct.ac.jp/info/archives/category/cancellation'
@@ -81,3 +86,6 @@ async def on_message(message):
     await bot.process_commands(message)
 
 bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+
+if __name__ == '__main__':
+    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
