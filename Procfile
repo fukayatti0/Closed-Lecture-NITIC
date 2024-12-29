@@ -1,1 +1,1 @@
-web: pip3 install -r requirements.txt && python ClosedLecture.py
+web: python3 -m pip install -r requirements.txt && python ClosedLecture.py
