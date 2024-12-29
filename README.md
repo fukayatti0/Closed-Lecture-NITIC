@@ -1,6 +1,6 @@
 # 閉講情報 NITIC
 
-このプロジェクトは茨城高専のウェブサイトから休講情報を取得し、出力します。
+このプロジェクトは茨城高専のウェブサイトから休講情報を取得し、指定したチャンネルに出力します。
 
 htmlから要素を抽出しているだけなので、使えなくなる可能性があります。
 
@@ -24,7 +24,7 @@ htmlから要素を抽出しているだけなので、使えなくなる可能�
 1. リポジトリをクローンします:
 
     ```sh
-    git clone https://github.com/yourusername/Closed-Lecture-NITIC.git
+    git clone https://github.com/fukayatti0/Closed-Lecture-NITIC.git
     cd Closed-Lecture-NITIC
     ```
 

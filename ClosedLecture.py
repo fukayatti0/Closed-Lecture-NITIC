@@ -1,9 +1,17 @@
+import discord
+from discord.ext import commands, tasks
 import requests
 import re
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+import pytz
 
 load_dotenv()
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 def extract_urls_from_site(url, pattern):
@@ -25,22 +33,40 @@ def extract_lines_with_pattern_from_url(url, pattern):
 
 def replace_chars_in_lines(lines, old_chars, new_chars):
     if len(old_chars) != len(new_chars):
-        raise ValueError("old_charsと新_charsの長さが一致しません。")
+        raise ValueError("old_charsとnew_charsの長さが一致しません。")
     for old_char, new_char in zip(old_chars, new_chars):
         lines = [line.replace(old_char, new_char) for line in lines]
     return lines
 
 
-def get_last_info():
-    if os.path.exists('last_info.txt'):
-        with open('last_info.txt', 'r', encoding='utf-8') as f:
-            return f.read().splitlines()
-    return []
+@bot.event
+async def on_ready():
+    print(f'{bot.user} has connected to Discord!')
+    check_class_info.start()
 
 
-def save_last_info(info):
-    with open('last_info.txt', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(info))
+@bot.command(name='classinfo', help='最新の授業情報を取得します')
+async def get_class_info(ctx):
+    info = fetch_class_info()
+    if info:
+        await ctx.send("最新の授業情報:\n" + "\n".join(info))
+    else:
+        await ctx.send("授業情報を取得できませんでした。")
+
+
+@tasks.loop(hours=24)
+async def check_class_info():
+    jst = pytz.timezone('Asia/Tokyo')
+    now = datetime.now(jst)
+    if now.weekday() == 6 and now.hour == 18 and now.minute == 30:  # Sunday at 18:30 JST
+        for guild in bot.guilds:
+            for channel in guild.text_channels:
+                if channel.name == 'general':  # Change this to the desired channel name
+                    info = fetch_class_info()
+                    if info:
+                        await channel.send("最新の授業情報:\n" + "\n".join(info))
+                    else:
+                        await channel.send("授業情報を取得できませんでした。")
 
 
 def fetch_class_info():
@@ -66,19 +92,14 @@ def fetch_class_info():
         return None
 
 
-def main():
-    info = fetch_class_info()
-    if info:
-        last_info = get_last_info()
-        if info != last_info:
-            print("最新の授業情報:\n" + "\n".join(info))
-            print("\n" + "="*40 + "\n")
-            save_last_info(info)
+@bot.event
+async def on_message(message):
+    if message.content.startswith('!here'):
+        info = fetch_class_info()
+        if info:
+            await message.channel.send("最新の授業情報:\n" + "\n".join(info))
         else:
-            print("新しい授業情報はありません。")
-    else:
-        print("授業情報を取得できませんでした。")
+            await message.channel.send("授業情報を取得できませんでした。")
+    await bot.process_commands(message)
 
-
-if __name__ == '__main__':
-    main()
+bot.run(os.getenv('DISCORD_BOT_TOKEN'))
